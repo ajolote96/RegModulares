@@ -25,6 +25,14 @@ class UserSeeder extends Seeder
             'codigo'=>'214569057',
             'email'=>'sergioreag@hotmail.com'
         ])->assignRole('Admin');
+        User::create([
+            'nombre'=>'Eduardo',
+            'paterno'=>'Guerrero',
+            'materno'=>'Figueroa',
+            'password'=>bcrypt('12345678'),
+            'codigo'=>'213743096',
+            'email'=>'hola@ejemplo.com'
+        ])->assignRole('Admin');
 
     }
 }
