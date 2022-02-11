@@ -471,8 +471,6 @@ private static $installed = array (
       ),
       'reference' => 'daa11c43729510b3700bc34d414664966b03bffe',
     ),
-<<<<<<< HEAD
-=======
     'jeroennoten/laravel-adminlte' =>
     array (
       'pretty_version' => 'v3.8.0',
@@ -482,7 +480,6 @@ private static $installed = array (
       ),
       'reference' => '5ba9fcebbdd889e4d05fdcfba927ffe1335f91ee',
     ),
->>>>>>> a422f05ae0b720c0410f2f189f64d16a5cd9f6c6
     'kodova/hamcrest-php' =>
     array (
       'replaced' =>
