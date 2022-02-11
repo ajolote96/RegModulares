@@ -1,0 +1,30 @@
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Database\Seeder;
+use App\Models\User;
+
+
+class UserSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     *
+     * @return void
+     */
+    public function run()
+    {
+
+        User::create([
+            'nombre'=>'Sergio',
+            'paterno'=>'Reyes',
+            'materno'=>'Aguila',
+            'password'=>bcrypt('12345678'),
+            'codigo'=>'214569057',
+            'email'=>'sergioreag@hotmail.com'
+        ])->assignRole('Admin');
+
+    }
+}
