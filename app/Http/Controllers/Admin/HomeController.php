@@ -8,6 +8,6 @@ use Illuminate\Http\Request;
 class HomeController extends Controller
 {
     public function index () {
-        return view('admin.administradores-index');
+        return view('alumnos.registro_proyecto_modular');
     }
 }
