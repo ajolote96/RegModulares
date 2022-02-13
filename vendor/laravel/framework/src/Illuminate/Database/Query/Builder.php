@@ -2,11 +2,8 @@
 
 namespace Illuminate\Database\Query;
 
-use BackedEnum;
-use Carbon\CarbonPeriod;
 use Closure;
 use DateTimeInterface;
-use Illuminate\Contracts\Database\Query\Builder as BuilderContract;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Concerns\BuildsQueries;
 use Illuminate\Database\Concerns\ExplainsQueries;
@@ -23,10 +20,9 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Traits\ForwardsCalls;
 use Illuminate\Support\Traits\Macroable;
 use InvalidArgumentException;
-use LogicException;
 use RuntimeException;
 
-class Builder implements BuilderContract
+class Builder
 {
     use BuildsQueries, ExplainsQueries, ForwardsCalls, Macroable {
         __call as macroCall;
@@ -239,7 +235,6 @@ class Builder implements BuilderContract
     {
         $this->columns = [];
         $this->bindings['select'] = [];
-
         $columns = is_array($columns) ? $columns : func_get_args();
 
         foreach ($columns as $as => $column) {
@@ -376,7 +371,7 @@ class Builder implements BuilderContract
             $this->getConnection()->getDatabaseName()) {
             $databaseName = $query->getConnection()->getDatabaseName();
 
-            if (! str_starts_with($query->from, $databaseName) && ! str_contains($query->from, '.')) {
+            if (strpos($query->from, $databaseName) !== 0 && strpos($query->from, '.') === false) {
                 $query->from($databaseName.'.'.$query->from);
             }
         }
@@ -412,6 +407,7 @@ class Builder implements BuilderContract
     /**
      * Force the query to only return distinct results.
      *
+     * @param  mixed  ...$distinct
      * @return $this
      */
     public function distinct()
@@ -678,8 +674,6 @@ class Builder implements BuilderContract
         $this->bindings['where'] = array_values(
             array_merge($this->bindings['where'], (array) $bindings)
         );
-
-        return $this;
     }
 
     /**
@@ -750,7 +744,7 @@ class Builder implements BuilderContract
         // If the column is making a JSON reference we'll check to see if the value
         // is a boolean. If it is, we'll add the raw boolean string as an actual
         // value to the query to ensure this is properly handled by the query.
-        if (str_contains($column, '->') && is_bool($value)) {
+        if (Str::contains($column, '->') && is_bool($value)) {
             $value = new Expression($value ? 'true' : 'false');
 
             if (is_string($column)) {
@@ -1124,18 +1118,14 @@ class Builder implements BuilderContract
      * Add a where between statement to the query.
      *
      * @param  string|\Illuminate\Database\Query\Expression  $column
-     * @param  iterable  $values
+     * @param  array  $values
      * @param  string  $boolean
      * @param  bool  $not
      * @return $this
      */
-    public function whereBetween($column, iterable $values, $boolean = 'and', $not = false)
+    public function whereBetween($column, array $values, $boolean = 'and', $not = false)
     {
         $type = 'between';
-
-        if ($values instanceof CarbonPeriod) {
-            $values = $values->toArray();
-        }
 
         $this->wheres[] = compact('type', 'column', 'values', 'boolean', 'not');
 
@@ -1166,10 +1156,10 @@ class Builder implements BuilderContract
      * Add an or where between statement to the query.
      *
      * @param  string  $column
-     * @param  iterable  $values
+     * @param  array  $values
      * @return $this
      */
-    public function orWhereBetween($column, iterable $values)
+    public function orWhereBetween($column, array $values)
     {
         return $this->whereBetween($column, $values, 'or');
     }
@@ -1190,11 +1180,11 @@ class Builder implements BuilderContract
      * Add a where not between statement to the query.
      *
      * @param  string  $column
-     * @param  iterable  $values
+     * @param  array  $values
      * @param  string  $boolean
      * @return $this
      */
-    public function whereNotBetween($column, iterable $values, $boolean = 'and')
+    public function whereNotBetween($column, array $values, $boolean = 'and')
     {
         return $this->whereBetween($column, $values, $boolean, true);
     }
@@ -1216,10 +1206,10 @@ class Builder implements BuilderContract
      * Add an or where not between statement to the query.
      *
      * @param  string  $column
-     * @param  iterable  $values
+     * @param  array  $values
      * @return $this
      */
-    public function orWhereNotBetween($column, iterable $values)
+    public function orWhereNotBetween($column, array $values)
     {
         return $this->whereNotBetween($column, $values, 'or');
     }
@@ -1490,7 +1480,7 @@ class Builder implements BuilderContract
      */
     public function whereNested(Closure $callback, $boolean = 'and')
     {
-        $callback($query = $this->forNestedWhere());
+        call_user_func($callback, $query = $this->forNestedWhere());
 
         return $this->addNestedWhereQuery($query, $boolean);
     }
@@ -1541,7 +1531,7 @@ class Builder implements BuilderContract
         // Once we have the query instance we can simply execute it so it can add all
         // of the sub-select's conditions to itself, and then we can cache it off
         // in the array of where clauses for the "main" parent query instance.
-        $callback($query = $this->forSubQuery());
+        call_user_func($callback, $query = $this->forSubQuery());
 
         $this->wheres[] = compact(
             'type', 'column', 'operator', 'query', 'boolean'
@@ -1567,7 +1557,7 @@ class Builder implements BuilderContract
         // Similar to the sub-select clause, we will create a new query instance so
         // the developer may cleanly specify the entire exists query and we will
         // compile the whole thing in the grammar and insert it into the SQL.
-        $callback($query);
+        call_user_func($callback, $query);
 
         return $this->addWhereExistsQuery($query, $boolean, $not);
     }
@@ -1830,39 +1820,6 @@ class Builder implements BuilderContract
     }
 
     /**
-     * Add a "where fulltext" clause to the query.
-     *
-     * @param  string|string[]  $columns
-     * @param  string  $value
-     * @param  string  $boolean
-     * @return $this
-     */
-    public function whereFullText($columns, $value, array $options = [], $boolean = 'and')
-    {
-        $type = 'Fulltext';
-
-        $columns = (array) $columns;
-
-        $this->wheres[] = compact('type', 'columns', 'value', 'options', 'boolean');
-
-        $this->addBinding($value);
-
-        return $this;
-    }
-
-    /**
-     * Add a "or where fulltext" clause to the query.
-     *
-     * @param  string|string[]  $columns
-     * @param  string  $value
-     * @return $this
-     */
-    public function orWhereFullText($columns, $value, array $options = [])
-    {
-        return $this->whereFulltext($columns, $value, $options, 'or');
-    }
-
-    /**
      * Add a "group by" clause to the query.
      *
      * @param  array|string  ...$groups
@@ -1899,7 +1856,7 @@ class Builder implements BuilderContract
     /**
      * Add a "having" clause to the query.
      *
-     * @param  \Closure|string  $column
+     * @param  string  $column
      * @param  string|null  $operator
      * @param  string|null  $value
      * @param  string  $boolean
@@ -1915,10 +1872,6 @@ class Builder implements BuilderContract
         [$value, $operator] = $this->prepareValueAndOperator(
             $value, $operator, func_num_args() === 2
         );
-
-        if ($column instanceof Closure && is_null($operator)) {
-            return $this->havingNested($column, $boolean);
-        }
 
         // If the given operator is not found in the list of valid operators we will
         // assume that the developer is just short-cutting the '=' operators and
@@ -1939,7 +1892,7 @@ class Builder implements BuilderContract
     /**
      * Add an "or having" clause to the query.
      *
-     * @param  \Closure|string  $column
+     * @param  string  $column
      * @param  string|null  $operator
      * @param  string|null  $value
      * @return $this
@@ -1951,93 +1904,6 @@ class Builder implements BuilderContract
         );
 
         return $this->having($column, $operator, $value, 'or');
-    }
-
-    /**
-     * Add a nested having statement to the query.
-     *
-     * @param  \Closure  $callback
-     * @param  string  $boolean
-     * @return $this
-     */
-    public function havingNested(Closure $callback, $boolean = 'and')
-    {
-        $callback($query = $this->forNestedWhere());
-
-        return $this->addNestedHavingQuery($query, $boolean);
-    }
-
-    /**
-     * Add another query builder as a nested having to the query builder.
-     *
-     * @param  \Illuminate\Database\Query\Builder  $query
-     * @param  string  $boolean
-     * @return $this
-     */
-    public function addNestedHavingQuery($query, $boolean = 'and')
-    {
-        if (count($query->havings)) {
-            $type = 'Nested';
-
-            $this->havings[] = compact('type', 'query', 'boolean');
-
-            $this->addBinding($query->getRawBindings()['having'], 'having');
-        }
-
-        return $this;
-    }
-
-    /**
-     * Add a "having null" clause to the query.
-     *
-     * @param  string|array  $columns
-     * @param  string  $boolean
-     * @param  bool  $not
-     * @return $this
-     */
-    public function havingNull($columns, $boolean = 'and', $not = false)
-    {
-        $type = $not ? 'NotNull' : 'Null';
-
-        foreach (Arr::wrap($columns) as $column) {
-            $this->havings[] = compact('type', 'column', 'boolean');
-        }
-
-        return $this;
-    }
-
-    /**
-     * Add an "or having null" clause to the query.
-     *
-     * @param  string  $column
-     * @return $this
-     */
-    public function orHavingNull($column)
-    {
-        return $this->havingNull($column, 'or');
-    }
-
-    /**
-     * Add a "having not null" clause to the query.
-     *
-     * @param  string|array  $columns
-     * @param  string  $boolean
-     * @return $this
-     */
-    public function havingNotNull($columns, $boolean = 'and')
-    {
-        return $this->havingNull($columns, $boolean, true);
-    }
-
-    /**
-     * Add an "or having not null" clause to the query.
-     *
-     * @param  string  $column
-     * @return $this
-     */
-    public function orHavingNotNull($column)
-    {
-        return $this->havingNotNull($column, 'or');
     }
 
     /**
@@ -2234,7 +2100,7 @@ class Builder implements BuilderContract
         $property = $this->unions ? 'unionLimit' : 'limit';
 
         if ($value >= 0) {
-            $this->$property = ! is_null($value) ? (int) $value : null;
+            $this->$property = $value;
         }
 
         return $this;
@@ -2338,7 +2204,7 @@ class Builder implements BuilderContract
     public function union($query, $all = false)
     {
         if ($query instanceof Closure) {
-            $query($query = $this->newQuery());
+            call_user_func($query, $query = $this->newQuery());
         }
 
         $this->unions[] = compact('query', 'all');
@@ -2726,7 +2592,7 @@ class Builder implements BuilderContract
             return $column;
         }
 
-        $separator = str_contains(strtolower($column), ' as ') ? ' as ' : '\.';
+        $separator = strpos(strtolower($column), ' as ') !== false ? ' as ' : '\.';
 
         return last(preg_split('~'.$separator.'~i', $column));
     }
@@ -2962,7 +2828,7 @@ class Builder implements BuilderContract
         // If the result doesn't contain a decimal place, we will assume it is an int then
         // cast it to one. When it does we will cast it to a float since it needs to be
         // cast to the expected data type for the developers out of pure convenience.
-        return ! str_contains((string) $result, '.')
+        return strpos((string) $result, '.') === false
                 ? (int) $result : (float) $result;
     }
 
@@ -3131,27 +2997,6 @@ class Builder implements BuilderContract
 
         return $this->connection->update($sql, $this->cleanBindings(
             $this->grammar->prepareBindingsForUpdate($this->bindings, $values)
-        ));
-    }
-
-    /**
-     * Update records in a PostgreSQL database using the update from syntax.
-     *
-     * @param  array  $values
-     * @return int
-     */
-    public function updateFrom(array $values)
-    {
-        if (! method_exists($this->grammar, 'compileUpdateFrom')) {
-            throw new LogicException('This database engine does not support the updateFrom method.');
-        }
-
-        $this->applyBeforeQueryCallbacks();
-
-        $sql = $this->grammar->compileUpdateFrom($this, $values);
-
-        return $this->connection->update($sql, $this->cleanBindings(
-            $this->grammar->prepareBindingsForUpdateFrom($this->bindings, $values)
         ));
     }
 
@@ -3391,30 +3236,12 @@ class Builder implements BuilderContract
         }
 
         if (is_array($value)) {
-            $this->bindings[$type] = array_values(array_map(
-                [$this, 'castBinding'],
-                array_merge($this->bindings[$type], $value),
-            ));
+            $this->bindings[$type] = array_values(array_merge($this->bindings[$type], $value));
         } else {
-            $this->bindings[$type][] = $this->castBinding($value);
+            $this->bindings[$type][] = $value;
         }
 
         return $this;
-    }
-
-    /**
-     * Cast the given binding value.
-     *
-     * @param  mixed  $value
-     * @return mixed
-     */
-    public function castBinding($value)
-    {
-        if (function_exists('enum_exists') && $value instanceof BackedEnum) {
-            return $value->value;
-        }
-
-        return $value;
     }
 
     /**
@@ -3438,13 +3265,9 @@ class Builder implements BuilderContract
      */
     public function cleanBindings(array $bindings)
     {
-        return collect($bindings)
-                    ->reject(function ($binding) {
-                        return $binding instanceof Expression;
-                    })
-                    ->map([$this, 'castBinding'])
-                    ->values()
-                    ->all();
+        return array_values(array_filter($bindings, function ($binding) {
+            return ! $binding instanceof Expression;
+        }));
     }
 
     /**
@@ -3499,7 +3322,7 @@ class Builder implements BuilderContract
     }
 
     /**
-     * Use the "write" PDO connection when executing the query.
+     * Use the write pdo for query.
      *
      * @return $this
      */
@@ -3579,7 +3402,7 @@ class Builder implements BuilderContract
     /**
      * Die and dump the current SQL and bindings.
      *
-     * @return never
+     * @return void
      */
     public function dd()
     {
@@ -3601,7 +3424,7 @@ class Builder implements BuilderContract
             return $this->macroCall($method, $parameters);
         }
 
-        if (str_starts_with($method, 'where')) {
+        if (Str::startsWith($method, 'where')) {
             return $this->dynamicWhere($method, $parameters);
         }
 

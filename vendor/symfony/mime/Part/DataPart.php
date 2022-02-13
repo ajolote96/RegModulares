@@ -20,9 +20,6 @@ use Symfony\Component\Mime\MimeTypes;
  */
 class DataPart extends TextPart
 {
-    /** @internal */
-    protected $_parent;
-
     private static $mimeTypes;
 
     private $filename;
@@ -35,8 +32,6 @@ class DataPart extends TextPart
      */
     public function __construct($body, string $filename = null, string $contentType = null, string $encoding = null)
     {
-        unset($this->_parent);
-
         if (null === $contentType) {
             $contentType = 'application/octet-stream';
         }
@@ -77,7 +72,7 @@ class DataPart extends TextPart
     /**
      * @return $this
      */
-    public function asInline(): static
+    public function asInline()
     {
         return $this->setDisposition('inline');
     }
@@ -134,7 +129,10 @@ class DataPart extends TextPart
         }
     }
 
-    public function __sleep(): array
+    /**
+     * @return array
+     */
+    public function __sleep()
     {
         // converts the body to a string
         parent::__sleep();

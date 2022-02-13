@@ -18,15 +18,6 @@ class ServeCommand extends Command
     protected $name = 'serve';
 
     /**
-     * The name of the console command.
-     *
-     * This name is used to identify the command during lazy loading.
-     *
-     * @var string|null
-     */
-    protected static $defaultName = 'serve';
-
-    /**
      * The console command description.
      *
      * @var string
@@ -49,6 +40,8 @@ class ServeCommand extends Command
      */
     public function handle()
     {
+        chdir(public_path());
+
         $this->line("<info>Starting Laravel development server:</info> http://{$this->host()}:{$this->port()}");
 
         $environmentFile = $this->option('env')
@@ -102,7 +95,7 @@ class ServeCommand extends Command
      */
     protected function startProcess($hasEnvironment)
     {
-        $process = new Process($this->serverCommand(), public_path(), collect($_ENV)->mapWithKeys(function ($value, $key) use ($hasEnvironment) {
+        $process = new Process($this->serverCommand(), null, collect($_ENV)->mapWithKeys(function ($value, $key) use ($hasEnvironment) {
             if ($this->option('no-reload') || ! $hasEnvironment) {
                 return [$key => $value];
             }
@@ -111,11 +104,8 @@ class ServeCommand extends Command
                 'APP_ENV',
                 'LARAVEL_SAIL',
                 'PHP_CLI_SERVER_WORKERS',
-                'PHP_IDE_CONFIG',
-                'SYSTEMROOT',
                 'XDEBUG_CONFIG',
                 'XDEBUG_MODE',
-                'XDEBUG_SESSION',
             ]) ? [$key => $value] : [$key => false];
         })->all());
 
@@ -133,15 +123,11 @@ class ServeCommand extends Command
      */
     protected function serverCommand()
     {
-        $server = file_exists(base_path('server.php'))
-            ? base_path('server.php')
-            : __DIR__.'/../resources/server.php';
-
         return [
             (new PhpExecutableFinder)->find(false),
             '-S',
             $this->host().':'.$this->port(),
-            $server,
+            base_path('server.php'),
         ];
     }
 
@@ -152,9 +138,7 @@ class ServeCommand extends Command
      */
     protected function host()
     {
-        [$host, ] = $this->getHostAndPort();
-
-        return $host;
+        return $this->input->getOption('host');
     }
 
     /**
@@ -164,30 +148,9 @@ class ServeCommand extends Command
      */
     protected function port()
     {
-        $port = $this->input->getOption('port');
-
-        if (is_null($port)) {
-            [, $port] = $this->getHostAndPort();
-        }
-
-        $port = $port ?: 8000;
+        $port = $this->input->getOption('port') ?: 8000;
 
         return $port + $this->portOffset;
-    }
-
-    /**
-     * Get the host and port from the host option string.
-     *
-     * @return array
-     */
-    protected function getHostAndPort()
-    {
-        $hostParts = explode(':', $this->input->getOption('host'));
-
-        return [
-            $hostParts[0],
-            $hostParts[1] ?? null,
-        ];
     }
 
     /**

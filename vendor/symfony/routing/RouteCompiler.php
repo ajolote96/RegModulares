@@ -20,6 +20,11 @@ namespace Symfony\Component\Routing;
 class RouteCompiler implements RouteCompilerInterface
 {
     /**
+     * @deprecated since Symfony 5.1, to be removed in 6.0
+     */
+    public const REGEX_DELIMITER = '#';
+
+    /**
      * This string defines the characters that are automatically considered separators in front of
      * optional placeholders (with default and no static text following). Such a single separator
      * can be left out together with the optional placeholder from matching and generating URLs.
@@ -42,7 +47,7 @@ class RouteCompiler implements RouteCompilerInterface
      * @throws \DomainException          if a variable name starts with a digit or if it is too long to be successfully used as
      *                                   a PCRE subpattern
      */
-    public static function compile(Route $route): CompiledRoute
+    public static function compile(Route $route)
     {
         $hostVariables = [];
         $variables = [];
@@ -150,7 +155,7 @@ class RouteCompiler implements RouteCompilerInterface
 
             if ($isSeparator && $precedingText !== $precedingChar) {
                 $tokens[] = ['text', substr($precedingText, 0, -\strlen($precedingChar))];
-            } elseif (!$isSeparator && '' !== $precedingText) {
+            } elseif (!$isSeparator && \strlen($precedingText) > 0) {
                 $tokens[] = ['text', $precedingText];
             }
 
@@ -287,6 +292,8 @@ class RouteCompiler implements RouteCompilerInterface
      * @param array $tokens        The route tokens
      * @param int   $index         The index of the current token
      * @param int   $firstOptional The index of the first optional token
+     *
+     * @return string The regexp pattern for a single token
      */
     private static function computeRegexp(array $tokens, int $index, int $firstOptional): string
     {

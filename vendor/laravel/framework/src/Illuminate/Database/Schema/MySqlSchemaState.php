@@ -85,7 +85,7 @@ class MySqlSchemaState extends SchemaState
      */
     protected function baseDumpCommand()
     {
-        $command = 'mysqldump '.$this->connectionString().' --no-tablespaces --skip-add-locks --skip-comments --skip-set-charset --tz-utc';
+        $command = 'mysqldump '.$this->connectionString().' --skip-add-locks --skip-comments --skip-set-charset --tz-utc';
 
         if (! $this->connection->isMaria()) {
             $command .= ' --column-statistics=0 --set-gtid-purged=OFF';
@@ -149,7 +149,7 @@ class MySqlSchemaState extends SchemaState
                 ), $output, $variables);
             }
 
-            if (str_contains($e->getMessage(), 'set-gtid-purged')) {
+            if (Str::contains($e->getMessage(), ['set-gtid-purged'])) {
                 return $this->executeDumpProcess(Process::fromShellCommandLine(
                     str_replace(' --set-gtid-purged=OFF', '', $process->getCommandLine())
                 ), $output, $variables);

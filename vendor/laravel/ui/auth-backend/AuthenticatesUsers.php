@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use DB;
 
 trait AuthenticatesUsers
 {
@@ -18,7 +19,11 @@ trait AuthenticatesUsers
      */
     public function showLoginForm()
     {
-        return view('auth.login');
+
+        $carreras = DB::table('carreras')->get();
+
+        return view('auth.login',['carreras'=>$carreras, 'nombre'=> 'registro']);
+
     }
 
     /**
@@ -31,6 +36,7 @@ trait AuthenticatesUsers
      */
     public function login(Request $request)
     {
+
         $this->validateLogin($request);
 
         // If the class is using the ThrottlesLogins trait, we can automatically throttle
@@ -44,10 +50,6 @@ trait AuthenticatesUsers
         }
 
         if ($this->attemptLogin($request)) {
-            if ($request->hasSession()) {
-                $request->session()->put('auth.password_confirmed_at', time());
-            }
-
             return $this->sendLoginResponse($request);
         }
 
@@ -129,7 +131,13 @@ trait AuthenticatesUsers
      */
     protected function authenticated(Request $request, $user)
     {
-        //
+
+        Auth::logoutOtherDevices(request('password'));
+        if ($user->tipo == 'prestadorp') {
+            Auth::logout();
+
+            return redirect()->route('login')->with('status', 'Cuenta inactiva, favor de comunicarlo con el administrador');
+        }
     }
 
     /**
@@ -154,7 +162,7 @@ trait AuthenticatesUsers
      */
     public function username()
     {
-        return 'email';
+        return 'correo';
     }
 
     /**

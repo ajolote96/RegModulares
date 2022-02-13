@@ -3,7 +3,7 @@
 namespace Illuminate\Events;
 
 use Closure;
-use Laravel\SerializableClosure\SerializableClosure;
+use Illuminate\Queue\SerializableClosure;
 
 class QueuedClosure
 {

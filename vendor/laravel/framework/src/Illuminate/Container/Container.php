@@ -187,11 +187,9 @@ class Container implements ArrayAccess, ContainerContract
     }
 
     /**
-     * {@inheritdoc}
-     *
-     * @return bool
+     *  {@inheritdoc}
      */
-    public function has(string $id): bool
+    public function has($id)
     {
         return $this->bound($id);
     }
@@ -609,7 +607,7 @@ class Container implements ArrayAccess, ContainerContract
         $instance = $this->make($abstract);
 
         foreach ($this->getReboundCallbacks($abstract) as $callback) {
-            $callback($this, $instance);
+            call_user_func($callback, $this, $instance);
         }
     }
 
@@ -695,11 +693,9 @@ class Container implements ArrayAccess, ContainerContract
     }
 
     /**
-     * {@inheritdoc}
-     *
-     * @return mixed
+     *  {@inheritdoc}
      */
-    public function get(string $id)
+    public function get($id)
     {
         try {
             return $this->resolve($id);
@@ -886,6 +882,10 @@ class Container implements ArrayAccess, ContainerContract
             return $this->notInstantiable($concrete);
         }
 
+        // if (in_array($concrete, $this->buildStack)) {
+        //     throw new CircularDependencyException("Circular dependency detected while resolving [{$concrete}].");
+        // }
+
         $this->buildStack[] = $concrete;
 
         $constructor = $reflector->getConstructor();
@@ -1001,7 +1001,7 @@ class Container implements ArrayAccess, ContainerContract
     protected function resolvePrimitive(ReflectionParameter $parameter)
     {
         if (! is_null($concrete = $this->getContextualConcrete('$'.$parameter->getName()))) {
-            return Util::unwrapIfClosure($concrete, $this);
+            return $concrete instanceof Closure ? $concrete($this) : $concrete;
         }
 
         if ($parameter->isDefaultValueAvailable()) {
@@ -1237,6 +1237,7 @@ class Container implements ArrayAccess, ContainerContract
      * @param  string  $abstract
      * @param  object  $object
      * @param  array  $callbacksPerType
+     *
      * @return array
      */
     protected function getCallbacksForType($abstract, $object, array $callbacksPerType)
@@ -1401,7 +1402,8 @@ class Container implements ArrayAccess, ContainerContract
      * @param  string  $key
      * @return bool
      */
-    public function offsetExists($key): bool
+    #[\ReturnTypeWillChange]
+    public function offsetExists($key)
     {
         return $this->bound($key);
     }
@@ -1412,7 +1414,8 @@ class Container implements ArrayAccess, ContainerContract
      * @param  string  $key
      * @return mixed
      */
-    public function offsetGet($key): mixed
+    #[\ReturnTypeWillChange]
+    public function offsetGet($key)
     {
         return $this->make($key);
     }
@@ -1424,7 +1427,8 @@ class Container implements ArrayAccess, ContainerContract
      * @param  mixed  $value
      * @return void
      */
-    public function offsetSet($key, $value): void
+    #[\ReturnTypeWillChange]
+    public function offsetSet($key, $value)
     {
         $this->bind($key, $value instanceof Closure ? $value : function () use ($value) {
             return $value;
@@ -1437,7 +1441,8 @@ class Container implements ArrayAccess, ContainerContract
      * @param  string  $key
      * @return void
      */
-    public function offsetUnset($key): void
+    #[\ReturnTypeWillChange]
+    public function offsetUnset($key)
     {
         unset($this->bindings[$key], $this->instances[$key], $this->resolved[$key]);
     }

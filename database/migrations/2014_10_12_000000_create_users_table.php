@@ -3,8 +3,9 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Hash;
 
-return new class extends Migration
+class CreateUsersTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,20 +14,42 @@ return new class extends Migration
      */
     public function up()
     {
+
+
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->integer('codigo',0,0);
-            $table->string('email')->unique();
+            $table->string('name');
+            $table->string('apellido');
+            $table->string('correo',50)->unique();
+            $table->string('codigo')->unique()->nullable();
+            $table->string('tipo',50);
+            $table->string('status',50)->default('sin_registro');
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->string('nombre');
-            $table->string('paterno');
-            $table->string('materno');
             $table->rememberToken();
-            $table->foreignId('current_team_id')->nullable();
-            $table->string('profile_photo_path', 2048)->nullable();
             $table->timestamps();
+            $table->integer('horas_servicio',0,0)->nullable()->unsigned();
+            $table->integer('horas',0,0)->nullable()->unsigned();
+            $table->tinyText('carrera')->nullable();
+            $table->string('tipo_cliente',50)->nullable();
         });
+        DB::table('users')->insert([
+            "name" =>"admin",
+            "apellido" => "admin",
+            "correo" => "admin@admin.com",
+            "codigo" => null,
+            "tipo" => "Superadmin",
+            "email_verified_at" => null,
+            "password" => Hash::make('123'),
+            "remember_token"=> null,
+            "horas_servicio" => null,
+            "horas"=>null,
+            "carrera"=> null,
+            "tipo_cliente" => null,
+        ]);
+
+
+
     }
 
     /**
@@ -38,4 +61,6 @@ return new class extends Migration
     {
         Schema::dropIfExists('users');
     }
-};
+
+
+}

@@ -83,7 +83,7 @@ class DatabaseTokenRepository implements TokenRepositoryInterface
      */
     public function create(CanResetPasswordContract $user)
     {
-        $email = $user->getEmailForPasswordReset();
+        $correo = $user->getEmailForPasswordReset();
 
         $this->deleteExisting($user);
 
@@ -92,7 +92,7 @@ class DatabaseTokenRepository implements TokenRepositoryInterface
         // the database so that we can verify the token within the actual reset.
         $token = $this->createNewToken();
 
-        $this->getTable()->insert($this->getPayload($email, $token));
+        $this->getTable()->insert($this->getPayload($correo, $token));
 
         return $token;
     }
@@ -105,7 +105,7 @@ class DatabaseTokenRepository implements TokenRepositoryInterface
      */
     protected function deleteExisting(CanResetPasswordContract $user)
     {
-        return $this->getTable()->where('email', $user->getEmailForPasswordReset())->delete();
+        return $this->getTable()->where('correo', $user->getEmailForPasswordReset())->delete();
     }
 
     /**
@@ -115,9 +115,9 @@ class DatabaseTokenRepository implements TokenRepositoryInterface
      * @param  string  $token
      * @return array
      */
-    protected function getPayload($email, $token)
+    protected function getPayload($correo, $token)
     {
-        return ['email' => $email, 'token' => $this->hasher->make($token), 'created_at' => new Carbon];
+        return ['correo' => $correo, 'token' => $this->hasher->make($token), 'created_at' => new Carbon];
     }
 
     /**
@@ -130,7 +130,7 @@ class DatabaseTokenRepository implements TokenRepositoryInterface
     public function exists(CanResetPasswordContract $user, $token)
     {
         $record = (array) $this->getTable()->where(
-            'email', $user->getEmailForPasswordReset()
+            'correo', $user->getEmailForPasswordReset()
         )->first();
 
         return $record &&
@@ -158,7 +158,7 @@ class DatabaseTokenRepository implements TokenRepositoryInterface
     public function recentlyCreatedToken(CanResetPasswordContract $user)
     {
         $record = (array) $this->getTable()->where(
-            'email', $user->getEmailForPasswordReset()
+            'correo', $user->getEmailForPasswordReset()
         )->first();
 
         return $record && $this->tokenRecentlyCreated($record['created_at']);

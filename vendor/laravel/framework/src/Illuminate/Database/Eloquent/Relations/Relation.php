@@ -3,7 +3,6 @@
 namespace Illuminate\Database\Eloquent\Relations;
 
 use Closure;
-use Illuminate\Contracts\Database\Eloquent\Builder as BuilderContract;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -14,10 +13,13 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Traits\ForwardsCalls;
 use Illuminate\Support\Traits\Macroable;
 
-abstract class Relation implements BuilderContract
+/**
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
+abstract class Relation
 {
     use ForwardsCalls, Macroable {
-        Macroable::__call as macroCall;
+        __call as macroCall;
     }
 
     /**
@@ -54,13 +56,6 @@ abstract class Relation implements BuilderContract
      * @var array
      */
     public static $morphMap = [];
-
-    /**
-     * Prevents morph relationships without a morph map.
-     *
-     * @var bool
-     */
-    protected static $requireMorphMap = false;
 
     /**
      * The count of self joins.
@@ -299,21 +294,9 @@ abstract class Relation implements BuilderContract
     /**
      * Get the base query builder driving the Eloquent builder.
      *
-     * @deprecated Use toBase() instead
-     *
      * @return \Illuminate\Database\Query\Builder
      */
     public function getBaseQuery()
-    {
-        return $this->toBase();
-    }
-
-    /**
-     * Get a base query builder instance.
-     *
-     * @return \Illuminate\Database\Query\Builder
-     */
-    public function toBase()
     {
         return $this->query->getQuery();
     }
@@ -394,41 +377,6 @@ abstract class Relation implements BuilderContract
     }
 
     /**
-     * Prevent polymorphic relationships from being used without model mappings.
-     *
-     * @param  bool  $requireMorphMap
-     * @return void
-     */
-    public static function requireMorphMap($requireMorphMap = true)
-    {
-        static::$requireMorphMap = $requireMorphMap;
-    }
-
-    /**
-     * Determine if polymorphic relationships require explicit model mapping.
-     *
-     * @return bool
-     */
-    public static function requiresMorphMap()
-    {
-        return static::$requireMorphMap;
-    }
-
-    /**
-     * Define the morph map for polymorphic relations and require all morphed models to be explicitly mapped.
-     *
-     * @param  array  $map
-     * @param  bool  $merge
-     * @return array
-     */
-    public static function enforceMorphMap(array $map, $merge = true)
-    {
-        static::requireMorphMap();
-
-        return static::morphMap($map, $merge);
-    }
-
-    /**
      * Set or get the morph map for polymorphic relations.
      *
      * @param  array|null  $map
@@ -488,7 +436,13 @@ abstract class Relation implements BuilderContract
             return $this->macroCall($method, $parameters);
         }
 
-        return $this->forwardDecoratedCallTo($this->query, $method, $parameters);
+        $result = $this->forwardCallTo($this->query, $method, $parameters);
+
+        if ($result === $this->query) {
+            return $this;
+        }
+
+        return $result;
     }
 
     /**

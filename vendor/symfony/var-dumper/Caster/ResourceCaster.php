@@ -22,7 +22,12 @@ use Symfony\Component\VarDumper\Cloner\Stub;
  */
 class ResourceCaster
 {
-    public static function castCurl(\CurlHandle $h, array $a, Stub $stub, bool $isNested): array
+    /**
+     * @param \CurlHandle|resource $h
+     *
+     * @return array
+     */
+    public static function castCurl($h, array $a, Stub $stub, bool $isNested)
     {
         return curl_getinfo($h);
     }

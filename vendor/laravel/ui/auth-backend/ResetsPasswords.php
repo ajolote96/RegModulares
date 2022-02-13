@@ -29,7 +29,7 @@ trait ResetsPasswords
         $token = $request->route()->parameter('token');
 
         return view('auth.passwords.reset')->with(
-            ['token' => $token, 'email' => $request->email]
+            ['token' => $token, 'correo' => $request->correo]
         );
     }
 
@@ -69,7 +69,7 @@ trait ResetsPasswords
     {
         return [
             'token' => 'required',
-            'email' => 'required|email',
+            'correo' => 'required|email',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ];
     }
@@ -93,7 +93,7 @@ trait ResetsPasswords
     protected function credentials(Request $request)
     {
         return $request->only(
-            'email', 'password', 'password_confirmation', 'token'
+            'correo', 'password', 'password_confirmation', 'token'
         );
     }
 
@@ -157,13 +157,13 @@ trait ResetsPasswords
     {
         if ($request->wantsJson()) {
             throw ValidationException::withMessages([
-                'email' => [trans($response)],
+                'correo' => [trans($response)],
             ]);
         }
 
         return redirect()->back()
-                    ->withInput($request->only('email'))
-                    ->withErrors(['email' => trans($response)]);
+                    ->withInput($request->only('correo'))
+                    ->withErrors(['correo' => trans($response)]);
     }
 
     /**

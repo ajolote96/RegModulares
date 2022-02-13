@@ -24,12 +24,13 @@ class RegisterController extends Controller
 
     use RegistersUsers;
 
+
     /**
      * Where to redirect users after registration.
      *
      * @var string
      */
-    protected $redirectTo = RouteServiceProvider::HOME;
+    protected $redirectTo = '/';
 
     /**
      * Create a new controller instance.
@@ -38,7 +39,7 @@ class RegisterController extends Controller
      */
     public function __construct()
     {
-        $this->middleware('guest');
+
     }
 
     /**
@@ -49,10 +50,49 @@ class RegisterController extends Controller
      */
     protected function validator(array $data)
     {
+        switch($data['tipo']){
+            case 'admin':
+                $rHoras =  ['nullable'];
+                $rCarrera = ['nullable'];
+                $rCodigo = ['nullable'];
+                break;
+            case 'prestadorp':
+                $rHoras =  ['required'];
+                $rCarrera = ['required','string'];
+                $rCodigo = ['required','string','unique:users'];
+                break;
+            case 'prestador':
+                $rHoras =  ['required'];
+                $rCarrera = ['required','string'];
+                $rCodigo = ['required','string','unique:users'];
+                break;
+            case 'clientes':
+                switch($data['tipo_cliente']){
+                    case 'Alumno':
+                    case 'Maestro':
+                        $rHoras =  ['nullable'];
+                        $rCarrera = ['required','string'];
+                        $rCodigo = ['required','string','unique:users'];
+                        break;
+                    case 'Otro':
+                        $rHoras =  ['nullable'];
+                        $rCarrera = ['nullable'];
+                        $rCodigo = ['nullable'];
+                }
+                break;
+        }
+
         return Validator::make($data, [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'apellido' => ['required', 'string', 'max:255'],
+            'codigo' => $rCodigo,
+            'password' => ['required', 'string', 'min:3', 'confirmed'],
+            'tipo' => ['required', 'string'],
+            'correo' => ['required', 'email', 'unique:users'],
+            'horas' => $rHoras,
+            'carrera' => $rCarrera,
+            'tipo_cliente' => ['nullable']
+
         ]);
     }
 
@@ -64,10 +104,52 @@ class RegisterController extends Controller
      */
     protected function create(array $data)
     {
+        switch($data['tipo']){
+            case 'admin':
+                $vHoras =  null;
+                $vCarrera = null;
+                $vCodigo = null;
+                $vTipo_cliente = null;
+                break;
+            case 'prestador':
+                $vHoras =  $data['horas'];
+                $vCarrera = $data['carrera'];
+                $vCodigo = $data['codigo'];
+                $vTipo_cliente = null;
+                break;
+            case 'prestadorp':
+                $vHoras =  $data['horas'];
+                $vCarrera = $data['carrera'];
+                $vCodigo = $data['codigo'];
+                $vTipo_cliente = null;
+                break;
+            case 'clientes':
+                switch($data['tipo_cliente']){
+                    case 'Alumno':
+                    case 'Maestro':
+                        $vHoras =  null;
+                        $vCarrera = $data['carrera'];
+                        $vCodigo = $data['codigo'];
+                        $vTipo_cliente = $data['tipo_cliente'];
+                        break;
+                    case 'Otro':
+                        $vHoras =  null;
+                        $vCarrera = null;
+                        $vCodigo = null;
+                        $vTipo_cliente = $data['tipo_cliente'];
+                }
+                break;
+        }
         return User::create([
             'name' => $data['name'],
-            'email' => $data['email'],
+            'apellido' => $data['apellido'],
+            'codigo' => $vCodigo,
             'password' => Hash::make($data['password']),
+            'tipo' => $data['tipo'],
+            'correo' => $data['correo'],
+            'horas' => $vHoras,
+            'carrera' => $vCarrera,
+            'tipo_cliente' => $vTipo_cliente
         ]);
     }
 }

@@ -13,6 +13,7 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Pipeline\Pipeline;
+use Illuminate\Support\Str;
 use ReflectionClass;
 use RuntimeException;
 
@@ -92,7 +93,7 @@ class CallQueuedHandler
      */
     protected function getCommand(array $data)
     {
-        if (str_starts_with($data['command'], 'O:')) {
+        if (Str::startsWith($data['command'], 'O:')) {
             return unserialize($data['command']);
         }
 

@@ -32,8 +32,6 @@ final class Container implements ContainerInterface
     }
 
     /**
-     * @param string $id
-     *
      * @throws \InvalidArgumentException
      * @throws \RuntimeException
      * @throws ContainerException
@@ -119,11 +117,9 @@ final class Container implements ContainerInterface
     }
 
     /**
-     * @param string $id
-     *
      * @throws \InvalidArgumentException
      */
-    public function has($id): bool
+    public function has($id)
     {
         if (!is_string($id)) {
             throw new \InvalidArgumentException(sprintf(

@@ -5,7 +5,6 @@ namespace Illuminate\Database;
 use Closure;
 use DateTimeInterface;
 use Doctrine\DBAL\Connection as DoctrineConnection;
-use Doctrine\DBAL\Types\Type;
 use Exception;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Events\QueryExecuted;
@@ -22,7 +21,6 @@ use Illuminate\Support\Arr;
 use LogicException;
 use PDO;
 use PDOStatement;
-use RuntimeException;
 
 class Connection implements ConnectionInterface
 {
@@ -56,7 +54,7 @@ class Connection implements ConnectionInterface
      *
      * @var string|null
      */
-    protected $readWriteType;
+    protected $type;
 
     /**
      * The table prefix for the connection.
@@ -164,25 +162,11 @@ class Connection implements ConnectionInterface
     protected $pretending = false;
 
     /**
-     * All of the callbacks that should be invoked before a query is executed.
-     *
-     * @var array
-     */
-    protected $beforeExecutingCallbacks = [];
-
-    /**
      * The instance of Doctrine connection.
      *
      * @var \Doctrine\DBAL\Connection
      */
     protected $doctrineConnection;
-
-    /**
-     * Type mappings that should be registered with new Doctrine connections.
-     *
-     * @var array
-     */
-    protected $doctrineTypeMappings = [];
 
     /**
      * The connection resolvers.
@@ -657,10 +641,6 @@ class Connection implements ConnectionInterface
      */
     protected function run($query, $bindings, Closure $callback)
     {
-        foreach ($this->beforeExecutingCallbacks as $beforeExecutingCallback) {
-            $beforeExecutingCallback($query, $bindings, $this);
-        }
-
         $this->reconnectIfMissingConnection();
 
         $start = microtime(true);
@@ -828,19 +808,6 @@ class Connection implements ConnectionInterface
     }
 
     /**
-     * Register a hook to be run just before a database query is executed.
-     *
-     * @param  \Closure  $callback
-     * @return $this
-     */
-    public function beforeExecuting(Closure $callback)
-    {
-        $this->beforeExecutingCallbacks[] = $callback;
-
-        return $this;
-    }
-
-    /**
      * Register a database query listener with the connection.
      *
      * @param  \Closure  $callback
@@ -865,12 +832,14 @@ class Connection implements ConnectionInterface
             return;
         }
 
-        return $this->events->dispatch(match ($event) {
-            'beganTransaction' => new TransactionBeginning($this),
-            'committed' => new TransactionCommitted($this),
-            'rollingBack' => new TransactionRolledBack($this),
-            default => null,
-        });
+        switch ($event) {
+            case 'beganTransaction':
+                return $this->events->dispatch(new TransactionBeginning($this));
+            case 'committed':
+                return $this->events->dispatch(new TransactionCommitted($this));
+            case 'rollingBack':
+                return $this->events->dispatch(new TransactionRolledBack($this));
+        }
     }
 
     /**
@@ -1009,44 +978,12 @@ class Connection implements ConnectionInterface
             $this->doctrineConnection = new DoctrineConnection(array_filter([
                 'pdo' => $this->getPdo(),
                 'dbname' => $this->getDatabaseName(),
-                'driver' => $driver->getName(),
+                'driver' => method_exists($driver, 'getName') ? $driver->getName() : null,
                 'serverVersion' => $this->getConfig('server_version'),
             ]), $driver);
-
-            foreach ($this->doctrineTypeMappings as $name => $type) {
-                $this->doctrineConnection
-                    ->getDatabasePlatform()
-                    ->registerDoctrineTypeMapping($type, $name);
-            }
         }
 
         return $this->doctrineConnection;
-    }
-
-    /**
-     * Register a custom Doctrine mapping type.
-     *
-     * @param  string  $class
-     * @param  string  $name
-     * @param  string  $type
-     * @return void
-     *
-     * @throws \Doctrine\DBAL\DBALException
-     * @throws \RuntimeException
-     */
-    public function registerDoctrineType(string $class, string $name, string $type): void
-    {
-        if (! $this->isDoctrineAvailable()) {
-            throw new RuntimeException(
-                'Registering a custom Doctrine type requires Doctrine DBAL (doctrine/dbal).'
-            );
-        }
-
-        if (! Type::hasType($name)) {
-            Type::addType($name, $class);
-        }
-
-        $this->doctrineTypeMappings[$name] = $type;
     }
 
     /**

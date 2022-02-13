@@ -5,7 +5,6 @@ namespace Illuminate\Foundation\Console;
 use App\Http\Middleware\PreventRequestsDuringMaintenance;
 use Exception;
 use Illuminate\Console\Command;
-use Illuminate\Foundation\Events\MaintenanceModeEnabled;
 use Illuminate\Foundation\Exceptions\RegisterErrorViewPaths;
 use Throwable;
 
@@ -24,15 +23,6 @@ class DownCommand extends Command
                                  {--status=503 : The status code that should be used when returning the maintenance mode response}';
 
     /**
-     * The name of the console command.
-     *
-     * This name is used to identify the command during lazy loading.
-     *
-     * @var string|null
-     */
-    protected static $defaultName = 'down';
-
-    /**
      * The console command description.
      *
      * @var string
@@ -47,20 +37,21 @@ class DownCommand extends Command
     public function handle()
     {
         try {
-            if ($this->laravel->maintenanceMode()->active()) {
+            if (is_file(storage_path('framework/down'))) {
                 $this->comment('Application is already down.');
 
                 return 0;
             }
 
-            $this->laravel->maintenanceMode()->activate($this->getDownFilePayload());
+            file_put_contents(
+                storage_path('framework/down'),
+                json_encode($this->getDownFilePayload(), JSON_PRETTY_PRINT)
+            );
 
             file_put_contents(
                 storage_path('framework/maintenance.php'),
                 file_get_contents(__DIR__.'/stubs/maintenance-mode.stub')
             );
-
-            $this->laravel->get('events')->dispatch(MaintenanceModeEnabled::class);
 
             $this->comment('Application is now in maintenance mode.');
         } catch (Exception $e) {

@@ -10,7 +10,7 @@ class TrustProxies
     /**
      * The trusted proxies for the application.
      *
-     * @var array|string|null
+     * @var string|array|null
      */
     protected $proxies;
 
@@ -19,7 +19,7 @@ class TrustProxies
      *
      * @var int
      */
-    protected $headers = Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_HOST | Request::HEADER_X_FORWARDED_PORT | Request::HEADER_X_FORWARDED_PROTO | Request::HEADER_X_FORWARDED_PREFIX | Request::HEADER_X_FORWARDED_AWS_ELB;
+    protected $headers = Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_HOST | Request::HEADER_X_FORWARDED_PORT | Request::HEADER_X_FORWARDED_PROTO | Request::HEADER_X_FORWARDED_AWS_ELB;
 
     /**
      * Handle an incoming request.
@@ -47,7 +47,7 @@ class TrustProxies
      */
     protected function setTrustedProxyIpAddresses(Request $request)
     {
-        $trustedIps = $this->proxies();
+        $trustedIps = $this->proxies;
 
         if ($trustedIps === '*' || $trustedIps === '**') {
             return $this->setTrustedProxyIpAddressesToTheCallingIp($request);
@@ -92,25 +92,35 @@ class TrustProxies
      */
     protected function getTrustedHeaderNames()
     {
-        return match ($this->headers) {
-            'HEADER_X_FORWARDED_AWS_ELB', Request::HEADER_X_FORWARDED_AWS_ELB => Request::HEADER_X_FORWARDED_AWS_ELB,
-            'HEADER_FORWARDED', Request::HEADER_FORWARDED => Request::HEADER_FORWARDED,
-            'HEADER_X_FORWARDED_FOR', Request::HEADER_X_FORWARDED_FOR => Request::HEADER_X_FORWARDED_FOR,
-            'HEADER_X_FORWARDED_HOST', Request::HEADER_X_FORWARDED_HOST => Request::HEADER_X_FORWARDED_HOST,
-            'HEADER_X_FORWARDED_PORT', Request::HEADER_X_FORWARDED_PORT => Request::HEADER_X_FORWARDED_PORT,
-            'HEADER_X_FORWARDED_PROTO', Request::HEADER_X_FORWARDED_PROTO => Request::HEADER_X_FORWARDED_PROTO,
-            'HEADER_X_FORWARDED_PREFIX', Request::HEADER_X_FORWARDED_PREFIX => Request::HEADER_X_FORWARDED_PREFIX,
-            default => Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_HOST | Request::HEADER_X_FORWARDED_PORT | Request::HEADER_X_FORWARDED_PROTO | Request::HEADER_X_FORWARDED_PREFIX | Request::HEADER_X_FORWARDED_AWS_ELB,
-        };
-    }
+        switch ($this->headers) {
+            case 'HEADER_X_FORWARDED_AWS_ELB':
+            case Request::HEADER_X_FORWARDED_AWS_ELB:
+                return Request::HEADER_X_FORWARDED_AWS_ELB;
 
-    /**
-     * Get the trusted proxies.
-     *
-     * @return array|string|null
-     */
-    protected function proxies()
-    {
-        return $this->proxies;
+            case 'HEADER_FORWARDED':
+            case Request::HEADER_FORWARDED:
+                return Request::HEADER_FORWARDED;
+
+            case 'HEADER_X_FORWARDED_FOR':
+            case Request::HEADER_X_FORWARDED_FOR:
+                return Request::HEADER_X_FORWARDED_FOR;
+
+            case 'HEADER_X_FORWARDED_HOST':
+            case Request::HEADER_X_FORWARDED_HOST:
+                return Request::HEADER_X_FORWARDED_HOST;
+
+            case 'HEADER_X_FORWARDED_PORT':
+            case Request::HEADER_X_FORWARDED_PORT:
+                return Request::HEADER_X_FORWARDED_PORT;
+
+            case 'HEADER_X_FORWARDED_PROTO':
+            case Request::HEADER_X_FORWARDED_PROTO:
+                return Request::HEADER_X_FORWARDED_PROTO;
+
+            default:
+                return Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_HOST | Request::HEADER_X_FORWARDED_PORT | Request::HEADER_X_FORWARDED_PROTO | Request::HEADER_X_FORWARDED_AWS_ELB;
+        }
+
+        return $this->headers;
     }
 }

@@ -51,7 +51,7 @@ class DatabaseUuidFailedJobProvider implements FailedJobProviderInterface, Pruna
      * @param  string  $queue
      * @param  string  $payload
      * @param  \Throwable  $exception
-     * @return string|null
+     * @return int|null
      */
     public function log($connection, $queue, $payload, $exception)
     {
@@ -112,14 +112,11 @@ class DatabaseUuidFailedJobProvider implements FailedJobProviderInterface, Pruna
     /**
      * Flush all of the failed jobs from storage.
      *
-     * @param  int|null  $hours
      * @return void
      */
-    public function flush($hours = null)
+    public function flush()
     {
-        $this->getTable()->when($hours, function ($query, $hours) {
-            $query->where('failed_at', '<=', Date::now()->subHours($hours));
-        })->delete();
+        $this->getTable()->delete();
     }
 
     /**

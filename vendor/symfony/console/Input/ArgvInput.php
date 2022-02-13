@@ -40,8 +40,8 @@ use Symfony\Component\Console\Exception\RuntimeException;
  */
 class ArgvInput extends Input
 {
-    private array $tokens;
-    private array $parsed;
+    private $tokens;
+    private $parsed;
 
     public function __construct(array $argv = null, InputDefinition $definition = null)
     {
@@ -68,25 +68,18 @@ class ArgvInput extends Input
         $parseOptions = true;
         $this->parsed = $this->tokens;
         while (null !== $token = array_shift($this->parsed)) {
-            $parseOptions = $this->parseToken($token, $parseOptions);
+            if ($parseOptions && '' == $token) {
+                $this->parseArgument($token);
+            } elseif ($parseOptions && '--' == $token) {
+                $parseOptions = false;
+            } elseif ($parseOptions && str_starts_with($token, '--')) {
+                $this->parseLongOption($token);
+            } elseif ($parseOptions && '-' === $token[0] && '-' !== $token) {
+                $this->parseShortOption($token);
+            } else {
+                $this->parseArgument($token);
+            }
         }
-    }
-
-    protected function parseToken(string $token, bool $parseOptions): bool
-    {
-        if ($parseOptions && '' == $token) {
-            $this->parseArgument($token);
-        } elseif ($parseOptions && '--' == $token) {
-            return false;
-        } elseif ($parseOptions && str_starts_with($token, '--')) {
-            $this->parseLongOption($token);
-        } elseif ($parseOptions && '-' === $token[0] && '-' !== $token) {
-            $this->parseShortOption($token);
-        } else {
-            $this->parseArgument($token);
-        }
-
-        return $parseOptions;
     }
 
     /**
@@ -141,7 +134,7 @@ class ArgvInput extends Input
         $name = substr($token, 2);
 
         if (false !== $pos = strpos($name, '=')) {
-            if ('' === $value = substr($name, $pos + 1)) {
+            if (0 === \strlen($value = substr($name, $pos + 1))) {
                 array_unshift($this->parsed, $value);
             }
             $this->addLongOption(substr($name, 0, $pos), $value);
@@ -199,7 +192,7 @@ class ArgvInput extends Input
      *
      * @throws RuntimeException When option given doesn't exist
      */
-    private function addShortOption(string $shortcut, mixed $value)
+    private function addShortOption(string $shortcut, $value)
     {
         if (!$this->definition->hasShortcut($shortcut)) {
             throw new RuntimeException(sprintf('The "-%s" option does not exist.', $shortcut));
@@ -213,7 +206,7 @@ class ArgvInput extends Input
      *
      * @throws RuntimeException When option given doesn't exist
      */
-    private function addLongOption(string $name, mixed $value)
+    private function addLongOption(string $name, $value)
     {
         if (!$this->definition->hasOption($name)) {
             if (!$this->definition->hasNegation($name)) {
@@ -266,7 +259,7 @@ class ArgvInput extends Input
     /**
      * {@inheritdoc}
      */
-    public function getFirstArgument(): ?string
+    public function getFirstArgument()
     {
         $isOption = false;
         foreach ($this->tokens as $i => $token) {
@@ -301,7 +294,7 @@ class ArgvInput extends Input
     /**
      * {@inheritdoc}
      */
-    public function hasParameterOption(string|array $values, bool $onlyParams = false): bool
+    public function hasParameterOption($values, bool $onlyParams = false)
     {
         $values = (array) $values;
 
@@ -326,7 +319,7 @@ class ArgvInput extends Input
     /**
      * {@inheritdoc}
      */
-    public function getParameterOption(string|array $values, string|bool|int|float|array|null $default = false, bool $onlyParams = false): mixed
+    public function getParameterOption($values, $default = false, bool $onlyParams = false)
     {
         $values = (array) $values;
         $tokens = $this->tokens;
@@ -356,8 +349,10 @@ class ArgvInput extends Input
 
     /**
      * Returns a stringified representation of the args passed to the command.
+     *
+     * @return string
      */
-    public function __toString(): string
+    public function __toString()
     {
         $tokens = array_map(function ($token) {
             if (preg_match('{^(-[^=]+=)(.+)}', $token, $match)) {

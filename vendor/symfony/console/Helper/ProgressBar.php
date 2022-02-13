@@ -36,32 +36,32 @@ final class ProgressBar
     private const FORMAT_DEBUG_NOMAX = 'debug_nomax';
     private const FORMAT_NORMAL_NOMAX = 'normal_nomax';
 
-    private int $barWidth = 28;
-    private string $barChar;
-    private string $emptyBarChar = '-';
-    private string $progressChar = '>';
-    private ?string $format = null;
-    private ?string $internalFormat = null;
-    private ?int $redrawFreq = 1;
-    private int $writeCount = 0;
-    private float $lastWriteTime = 0;
-    private float $minSecondsBetweenRedraws = 0;
-    private float $maxSecondsBetweenRedraws = 1;
+    private $barWidth = 28;
+    private $barChar;
+    private $emptyBarChar = '-';
+    private $progressChar = '>';
+    private $format;
+    private $internalFormat;
+    private $redrawFreq = 1;
+    private $writeCount;
+    private $lastWriteTime;
+    private $minSecondsBetweenRedraws = 0;
+    private $maxSecondsBetweenRedraws = 1;
     private $output;
-    private int $step = 0;
-    private ?int $max = null;
-    private int $startTime;
-    private int $stepWidth;
-    private float $percent = 0.0;
-    private int $formatLineCount;
-    private array $messages = [];
-    private bool $overwrite = true;
+    private $step = 0;
+    private $max;
+    private $startTime;
+    private $stepWidth;
+    private $percent = 0.0;
+    private $formatLineCount;
+    private $messages = [];
+    private $overwrite = true;
     private $terminal;
-    private ?string $previousMessage = null;
+    private $previousMessage;
     private $cursor;
 
-    private static array $formatters;
-    private static array $formats;
+    private static $formatters;
+    private static $formats;
 
     /**
      * @param int $max Maximum steps (0 if unknown)
@@ -103,7 +103,9 @@ final class ProgressBar
      */
     public static function setPlaceholderFormatterDefinition(string $name, callable $callable): void
     {
-        self::$formatters ??= self::initPlaceholderFormatters();
+        if (!self::$formatters) {
+            self::$formatters = self::initPlaceholderFormatters();
+        }
 
         self::$formatters[$name] = $callable;
     }
@@ -112,10 +114,14 @@ final class ProgressBar
      * Gets the placeholder formatter for a given name.
      *
      * @param string $name The placeholder name (including the delimiter char like %)
+     *
+     * @return callable|null A PHP callable
      */
     public static function getPlaceholderFormatterDefinition(string $name): ?callable
     {
-        self::$formatters ??= self::initPlaceholderFormatters();
+        if (!self::$formatters) {
+            self::$formatters = self::initPlaceholderFormatters();
+        }
 
         return self::$formatters[$name] ?? null;
     }
@@ -130,7 +136,9 @@ final class ProgressBar
      */
     public static function setFormatDefinition(string $name, string $format): void
     {
-        self::$formats ??= self::initFormats();
+        if (!self::$formats) {
+            self::$formats = self::initFormats();
+        }
 
         self::$formats[$name] = $format;
     }
@@ -139,10 +147,14 @@ final class ProgressBar
      * Gets the format for a given name.
      *
      * @param string $name The format name
+     *
+     * @return string|null A format string
      */
     public static function getFormatDefinition(string $name): ?string
     {
-        self::$formats ??= self::initFormats();
+        if (!self::$formats) {
+            self::$formats = self::initFormats();
+        }
 
         return self::$formats[$name] ?? null;
     }
@@ -232,7 +244,11 @@ final class ProgressBar
 
     public function getBarCharacter(): string
     {
-        return $this->barChar ?? ($this->max ? '=' : $this->emptyBarChar);
+        if (null === $this->barChar) {
+            return $this->max ? '=' : $this->emptyBarChar;
+        }
+
+        return $this->barChar;
     }
 
     public function setEmptyBarCharacter(string $char)
@@ -466,10 +482,8 @@ final class ProgressBar
                     }
                     $this->output->clear($lineCount);
                 } else {
-                    for ($i = 0; $i < $this->formatLineCount; ++$i) {
-                        $this->cursor->moveToColumn(1);
-                        $this->cursor->clearLine();
-                        $this->cursor->moveUp();
+                    if ($this->formatLineCount > 0) {
+                        $this->cursor->moveUp($this->formatLineCount);
                     }
 
                     $this->cursor->moveToColumn(1);
@@ -566,8 +580,6 @@ final class ProgressBar
 
     private function buildLine(): string
     {
-        \assert(null !== $this->format);
-
         $regex = "{%([a-z\-_]+)(?:\:([^%]+))?%}i";
         $callback = function ($matches) {
             if ($formatter = $this::getPlaceholderFormatterDefinition($matches[1])) {

@@ -8,61 +8,55 @@ class NullSessionHandler implements SessionHandlerInterface
 {
     /**
      * {@inheritdoc}
-     *
-     * @return bool
      */
-    public function open($savePath, $sessionName): bool
+    #[\ReturnTypeWillChange]
+    public function open($savePath, $sessionName)
     {
         return true;
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @return bool
      */
-    public function close(): bool
+    #[\ReturnTypeWillChange]
+    public function close()
     {
         return true;
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @return string
      */
-    public function read($sessionId): string
+    #[\ReturnTypeWillChange]
+    public function read($sessionId)
     {
         return '';
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @return bool
      */
-    public function write($sessionId, $data): bool
+    #[\ReturnTypeWillChange]
+    public function write($sessionId, $data)
     {
         return true;
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @return bool
      */
-    public function destroy($sessionId): bool
+    #[\ReturnTypeWillChange]
+    public function destroy($sessionId)
     {
         return true;
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @return int
      */
-    public function gc($lifetime): int
+    #[\ReturnTypeWillChange]
+    public function gc($lifetime)
     {
-        return 0;
+        return true;
     }
 }

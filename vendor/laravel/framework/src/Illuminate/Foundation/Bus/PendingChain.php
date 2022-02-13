@@ -5,7 +5,7 @@ namespace Illuminate\Foundation\Bus;
 use Closure;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Queue\CallQueuedClosure;
-use Laravel\SerializableClosure\SerializableClosure;
+use Illuminate\Queue\SerializableClosure;
 
 class PendingChain
 {

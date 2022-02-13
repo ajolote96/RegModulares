@@ -13,14 +13,13 @@ use Illuminate\Http\Client\Events\RequestSending;
 use Illuminate\Http\Client\Events\ResponseReceived;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
-use Illuminate\Support\Traits\Conditionable;
 use Illuminate\Support\Traits\Macroable;
 use Psr\Http\Message\MessageInterface;
 use Symfony\Component\VarDumper\VarDumper;
 
 class PendingRequest
 {
-    use Conditionable, Macroable;
+    use Macroable;
 
     /**
      * The factory instance.
@@ -100,20 +99,6 @@ class PendingRequest
     protected $retryDelay = 100;
 
     /**
-     * Whether to throw an exception when all retries fail.
-     *
-     * @var bool
-     */
-    protected $retryThrow = true;
-
-    /**
-     * The callback that will determine if the request should be retried.
-     *
-     * @var callable|null
-     */
-    protected $retryWhenCallback = null;
-
-    /**
      * The callbacks that should execute before the request is sent.
      *
      * @var \Illuminate\Support\Collection
@@ -169,9 +154,7 @@ class PendingRequest
         $this->asJson();
 
         $this->options = [
-            'connect_timeout' => 10,
             'http_errors' => false,
-            'timeout' => 30,
         ];
 
         $this->beforeSendingCallbacks = collect([function (Request $request, array $options, PendingRequest $pendingRequest) {
@@ -384,9 +367,7 @@ class PendingRequest
      */
     public function withUserAgent($userAgent)
     {
-        return tap($this, function ($request) use ($userAgent) {
-            return $this->options['headers']['User-Agent'] = trim($userAgent);
-        });
+        return $this->withHeaders(['User-Agent' => $userAgent]);
     }
 
     /**
@@ -456,33 +437,16 @@ class PendingRequest
     }
 
     /**
-     * Specify the connect timeout (in seconds) for the request.
-     *
-     * @param  int  $seconds
-     * @return $this
-     */
-    public function connectTimeout(int $seconds)
-    {
-        return tap($this, function () use ($seconds) {
-            $this->options['connect_timeout'] = $seconds;
-        });
-    }
-
-    /**
      * Specify the number of times the request should be attempted.
      *
      * @param  int  $times
      * @param  int  $sleep
-     * @param  callable|null  $when
-     * @param  bool  $throw
      * @return $this
      */
-    public function retry(int $times, int $sleep = 0, ?callable $when = null, bool $throw = true)
+    public function retry(int $times, int $sleep = 0)
     {
         $this->tries = $times;
         $this->retryDelay = $sleep;
-        $this->retryThrow = $throw;
-        $this->retryWhenCallback = $when;
 
         return $this;
     }
@@ -595,7 +559,7 @@ class PendingRequest
      * @param  array  $data
      * @return \Illuminate\Http\Client\Response
      */
-    public function post(string $url, $data = [])
+    public function post(string $url, array $data = [])
     {
         return $this->send('POST', $url, [
             $this->bodyFormat => $data,
@@ -677,41 +641,6 @@ class PendingRequest
     {
         $url = ltrim(rtrim($this->baseUrl, '/').'/'.ltrim($url, '/'), '/');
 
-        $options = $this->parseHttpOptions($options);
-
-        [$this->pendingBody, $this->pendingFiles] = [null, []];
-
-        if ($this->async) {
-            return $this->makePromise($method, $url, $options);
-        }
-
-        return retry($this->tries ?? 1, function () use ($method, $url, $options) {
-            try {
-                return tap(new Response($this->sendRequest($method, $url, $options)), function ($response) {
-                    $this->populateResponse($response);
-
-                    if ($this->tries > 1 && $this->retryThrow && ! $response->successful()) {
-                        $response->throw();
-                    }
-
-                    $this->dispatchResponseReceivedEvent($response);
-                });
-            } catch (ConnectException $e) {
-                $this->dispatchConnectionFailedEvent();
-
-                throw new ConnectionException($e->getMessage(), 0, $e);
-            }
-        }, $this->retryDelay ?? 100, $this->retryWhenCallback);
-    }
-
-    /**
-     * Parse the given HTTP options and set the appropriate additional options.
-     *
-     * @param  array  $options
-     * @return array
-     */
-    protected function parseHttpOptions(array $options)
-    {
         if (isset($options[$this->bodyFormat])) {
             if ($this->bodyFormat === 'multipart') {
                 $options[$this->bodyFormat] = $this->parseMultipartBodyFormat($options[$this->bodyFormat]);
@@ -728,7 +657,29 @@ class PendingRequest
             $options[$this->bodyFormat] = $this->pendingBody;
         }
 
-        return collect($options)->toArray();
+        [$this->pendingBody, $this->pendingFiles] = [null, []];
+
+        if ($this->async) {
+            return $this->makePromise($method, $url, $options);
+        }
+
+        return retry($this->tries ?? 1, function () use ($method, $url, $options) {
+            try {
+                return tap(new Response($this->sendRequest($method, $url, $options)), function ($response) {
+                    $this->populateResponse($response);
+
+                    if ($this->tries > 1 && ! $response->successful()) {
+                        $response->throw();
+                    }
+
+                    $this->dispatchResponseReceivedEvent($response);
+                });
+            } catch (ConnectException $e) {
+                $this->dispatchConnectionFailedEvent();
+
+                throw new ConnectionException($e->getMessage(), 0, $e);
+            }
+        }, $this->retryDelay ?? 100);
     }
 
     /**
@@ -839,72 +790,27 @@ class PendingRequest
      */
     public function buildClient()
     {
-        return $this->requestsReusableClient()
-               ? $this->getReusableClient()
-               : $this->createClient($this->buildHandlerStack());
-    }
-
-    /**
-     * Determine if a reusable client is required.
-     *
-     * @return bool
-     */
-    protected function requestsReusableClient()
-    {
-        return ! is_null($this->client) || $this->async;
-    }
-
-    /**
-     * Retrieve a reusable Guzzle client.
-     *
-     * @return \GuzzleHttp\Client
-     */
-    protected function getReusableClient()
-    {
-        return $this->client = $this->client ?: $this->createClient($this->buildHandlerStack());
-    }
-
-    /**
-     * Create new Guzzle client.
-     *
-     * @param  \GuzzleHttp\HandlerStack  $handlerStack
-     * @return \GuzzleHttp\Client
-     */
-    public function createClient($handlerStack)
-    {
-        return new Client([
-            'handler' => $handlerStack,
+        return $this->client = $this->client ?: new Client([
+            'handler' => $this->buildHandlerStack(),
             'cookies' => true,
         ]);
     }
 
     /**
-     * Build the Guzzle client handler stack.
+     * Build the before sending handler stack.
      *
      * @return \GuzzleHttp\HandlerStack
      */
     public function buildHandlerStack()
     {
-        return $this->pushHandlers(HandlerStack::create());
-    }
-
-    /**
-     * Add the necessary handlers to the given handler stack.
-     *
-     * @param  \GuzzleHttp\HandlerStack  $handlerStack
-     * @return \GuzzleHttp\HandlerStack
-     */
-    public function pushHandlers($handlerStack)
-    {
-        return tap($handlerStack, function ($stack) {
+        return tap(HandlerStack::create(), function ($stack) {
             $stack->push($this->buildBeforeSendingHandler());
             $stack->push($this->buildRecorderHandler());
+            $stack->push($this->buildStubHandler());
 
             $this->middleware->each(function ($middleware) use ($stack) {
                 $stack->push($middleware);
             });
-
-            $stack->push($this->buildStubHandler());
         });
     }
 
@@ -934,7 +840,7 @@ class PendingRequest
                 $promise = $handler($request, $options);
 
                 return $promise->then(function ($response) use ($request, $options) {
-                    $this->factory?->recordRequestResponsePair(
+                    optional($this->factory)->recordRequestResponsePair(
                         (new Request($request))->withData($options['laravel_data']),
                         new Response($response)
                     );
@@ -1071,7 +977,7 @@ class PendingRequest
      */
     protected function dispatchRequestSendingEvent()
     {
-        if ($dispatcher = $this->factory?->getDispatcher()) {
+        if ($dispatcher = optional($this->factory)->getDispatcher()) {
             $dispatcher->dispatch(new RequestSending($this->request));
         }
     }
@@ -1084,7 +990,7 @@ class PendingRequest
      */
     protected function dispatchResponseReceivedEvent(Response $response)
     {
-        if (! ($dispatcher = $this->factory?->getDispatcher()) ||
+        if (! ($dispatcher = optional($this->factory)->getDispatcher()) ||
             ! $this->request) {
             return;
         }
@@ -1099,7 +1005,7 @@ class PendingRequest
      */
     protected function dispatchConnectionFailedEvent()
     {
-        if ($dispatcher = $this->factory?->getDispatcher()) {
+        if ($dispatcher = optional($this->factory)->getDispatcher()) {
             $dispatcher->dispatch(new ConnectionFailed($this->request));
         }
     }
@@ -1113,21 +1019,6 @@ class PendingRequest
     public function setClient(Client $client)
     {
         $this->client = $client;
-
-        return $this;
-    }
-
-    /**
-     * Create a new client instance using the given handler.
-     *
-     * @param  callable  $handler
-     * @return $this
-     */
-    public function setHandler($handler)
-    {
-        $this->client = $this->createClient(
-            $this->pushHandlers(HandlerStack::create($handler))
-        );
 
         return $this;
     }

@@ -254,7 +254,7 @@ class CacheManager implements FactoryContract
     /**
      * Create new DynamoDb Client instance.
      *
-     * @return \Aws\DynamoDb\DynamoDbClient
+     * @return DynamoDbClient
      */
     protected function newDynamodbClient(array $config)
     {

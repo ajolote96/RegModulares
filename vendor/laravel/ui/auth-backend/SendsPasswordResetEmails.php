@@ -49,7 +49,7 @@ trait SendsPasswordResetEmails
      */
     protected function validateEmail(Request $request)
     {
-        $request->validate(['email' => 'required|email']);
+        $request->validate(['correo' => 'required|email']);
     }
 
     /**
@@ -60,7 +60,7 @@ trait SendsPasswordResetEmails
      */
     protected function credentials(Request $request)
     {
-        return $request->only('email');
+        return $request->only('correo');
     }
 
     /**
@@ -90,13 +90,13 @@ trait SendsPasswordResetEmails
     {
         if ($request->wantsJson()) {
             throw ValidationException::withMessages([
-                'email' => [trans($response)],
+                'correo' => [trans($response)],
             ]);
         }
 
         return back()
-                ->withInput($request->only('email'))
-                ->withErrors(['email' => trans($response)]);
+                ->withInput($request->only('correo'))
+                ->withErrors(['correo' => trans($response)]);
     }
 
     /**

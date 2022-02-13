@@ -25,14 +25,13 @@ use Symfony\Component\HttpKernel\Log\DebugLoggerInterface;
 class LoggerDataCollector extends DataCollector implements LateDataCollectorInterface
 {
     private $logger;
-    private ?string $containerPathPrefix;
-    private $currentRequest = null;
+    private $containerPathPrefix;
+    private $currentRequest;
     private $requestStack;
-    private ?array $processedLogs = null;
 
     public function __construct(object $logger = null, string $containerPathPrefix = null, RequestStack $requestStack = null)
     {
-        if ($logger instanceof DebugLoggerInterface) {
+        if (null !== $logger && $logger instanceof DebugLoggerInterface) {
             $this->logger = $logger;
         }
 
@@ -53,7 +52,7 @@ class LoggerDataCollector extends DataCollector implements LateDataCollectorInte
      */
     public function reset()
     {
-        if (isset($this->logger)) {
+        if ($this->logger instanceof DebugLoggerInterface) {
             $this->logger->clear();
         }
         $this->data = [];
@@ -64,7 +63,7 @@ class LoggerDataCollector extends DataCollector implements LateDataCollectorInte
      */
     public function lateCollect()
     {
-        if (isset($this->logger)) {
+        if (null !== $this->logger) {
             $containerDeprecationLogs = $this->getContainerDeprecationLogs();
             $this->data = $this->computeErrorsCount($containerDeprecationLogs);
             // get compiler logs later (only when they are needed) to improve performance
@@ -79,81 +78,6 @@ class LoggerDataCollector extends DataCollector implements LateDataCollectorInte
     public function getLogs()
     {
         return $this->data['logs'] ?? [];
-    }
-
-    public function getProcessedLogs()
-    {
-        if (null !== $this->processedLogs) {
-            return $this->processedLogs;
-        }
-
-        $rawLogs = $this->getLogs();
-        if ([] === $rawLogs) {
-            return $this->processedLogs = $rawLogs;
-        }
-
-        $logs = [];
-        foreach ($this->getLogs()->getValue() as $rawLog) {
-            $rawLogData = $rawLog->getValue();
-
-            if ($rawLogData['priority']->getValue() > 300) {
-                $logType = 'error';
-            } elseif (isset($rawLogData['scream']) && false === $rawLogData['scream']->getValue()) {
-                $logType = 'deprecation';
-            } elseif (isset($rawLogData['scream']) && true === $rawLogData['scream']->getValue()) {
-                $logType = 'silenced';
-            } else {
-                $logType = 'regular';
-            }
-
-            $logs[] = [
-                'type' => $logType,
-                'errorCounter' => isset($rawLogData['errorCounter']) ? $rawLogData['errorCounter']->getValue() : 1,
-                'timestamp' => $rawLogData['timestamp_rfc3339']->getValue(),
-                'priority' => $rawLogData['priority']->getValue(),
-                'priorityName' => $rawLogData['priorityName']->getValue(),
-                'channel' => $rawLogData['channel']->getValue(),
-                'message' => $rawLogData['message'],
-                'context' => $rawLogData['context'],
-            ];
-        }
-
-        // sort logs from oldest to newest
-        usort($logs, static function ($logA, $logB) {
-            return $logA['timestamp'] <=> $logB['timestamp'];
-        });
-
-        return $this->processedLogs = $logs;
-    }
-
-    public function getFilters()
-    {
-        $filters = [
-            'channel' => [],
-            'priority' => [
-                'Debug' => 100,
-                'Info' => 200,
-                'Warning' => 300,
-                'Error' => 400,
-                'Critical' => 500,
-                'Alert' => 550,
-                'Emergency' => 600,
-            ],
-        ];
-
-        $allChannels = [];
-        foreach ($this->getProcessedLogs() as $log) {
-            if ('' === trim($log['channel'])) {
-                continue;
-            }
-
-            $allChannels[] = $log['channel'];
-        }
-        $channels = array_unique($allChannels);
-        sort($channels);
-        $filters['channel'] = $channels;
-
-        return $filters;
     }
 
     public function getPriorities()
@@ -189,7 +113,7 @@ class LoggerDataCollector extends DataCollector implements LateDataCollectorInte
     /**
      * {@inheritdoc}
      */
-    public function getName(): string
+    public function getName()
     {
         return 'logger';
     }
@@ -209,7 +133,6 @@ class LoggerDataCollector extends DataCollector implements LateDataCollectorInte
         foreach (unserialize($logContent) as $log) {
             $log['context'] = ['exception' => new SilencedErrorContext($log['type'], $log['file'], $log['line'], $log['trace'], $log['count'])];
             $log['timestamp'] = $bootTime;
-            $log['timestamp_rfc3339'] = (new \DateTimeImmutable())->setTimestamp($bootTime)->format(\DateTimeInterface::RFC3339_EXTENDED);
             $log['priority'] = 100;
             $log['priorityName'] = 'DEBUG';
             $log['channel'] = null;

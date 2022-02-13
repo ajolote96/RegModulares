@@ -6,6 +6,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use DB;
 
 trait RegistersUsers
 {
@@ -16,10 +17,7 @@ trait RegistersUsers
      *
      * @return \Illuminate\View\View
      */
-    public function showRegistrationForm()
-    {
-        return view('auth.register');
-    }
+
 
     /**
      * Handle a registration request for the application.
@@ -33,7 +31,20 @@ trait RegistersUsers
 
         event(new Registered($user = $this->create($request->all())));
 
-        $this->guard()->login($user);
+            if($user->tipo == "clientes" ){
+
+
+                    $crear = DB::table('clientes')->insert(
+                        ['id' => $user->id,
+                        'codigo'=>$user->codigo,
+                        'nombre'=>$user->name,
+                        ]
+                    );
+
+            }
+
+
+
 
         if ($response = $this->registered($request, $user)) {
             return $response;
@@ -41,7 +52,7 @@ trait RegistersUsers
 
         return $request->wantsJson()
                     ? new JsonResponse([], 201)
-                    : redirect($this->redirectPath());
+                    : redirect()->route('login')->with('statusC', 'Usuario creado correctamente');
     }
 
     /**

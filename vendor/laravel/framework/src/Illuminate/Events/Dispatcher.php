@@ -77,24 +77,18 @@ class Dispatcher implements DispatcherContract
     public function listen($events, $listener = null)
     {
         if ($events instanceof Closure) {
-            return collect($this->firstClosureParameterTypes($events))
-                ->each(function ($event) use ($events) {
-                    $this->listen($event, $events);
-                });
+            return $this->listen($this->firstClosureParameterType($events), $events);
         } elseif ($events instanceof QueuedClosure) {
-            return collect($this->firstClosureParameterTypes($events->closure))
-                ->each(function ($event) use ($events) {
-                    $this->listen($event, $events->resolve());
-                });
+            return $this->listen($this->firstClosureParameterType($events->closure), $events->resolve());
         } elseif ($listener instanceof QueuedClosure) {
             $listener = $listener->resolve();
         }
 
         foreach ((array) $events as $event) {
-            if (str_contains($event, '*')) {
+            if (Str::contains($event, '*')) {
                 $this->setupWildcardListen($event, $listener);
             } else {
-                $this->listeners[$event][] = $listener;
+                $this->listeners[$event][] = $this->makeListener($listener);
             }
         }
     }
@@ -108,7 +102,7 @@ class Dispatcher implements DispatcherContract
      */
     protected function setupWildcardListen($event, $listener)
     {
-        $this->wildcards[$event][] = $listener;
+        $this->wildcards[$event][] = $this->makeListener($listener, true);
 
         $this->wildcardsCache = [];
     }
@@ -182,13 +176,7 @@ class Dispatcher implements DispatcherContract
 
         if (is_array($events)) {
             foreach ($events as $event => $listeners) {
-                foreach (Arr::wrap($listeners) as $listener) {
-                    if (is_string($listener) && method_exists($subscriber, $listener)) {
-                        $this->listen($event, [get_class($subscriber), $listener]);
-
-                        continue;
-                    }
-
+                foreach ($listeners as $listener) {
                     $this->listen($event, $listener);
                 }
             }
@@ -328,8 +316,10 @@ class Dispatcher implements DispatcherContract
      */
     public function getListeners($eventName)
     {
+        $listeners = $this->listeners[$eventName] ?? [];
+
         $listeners = array_merge(
-            $this->prepareListeners($eventName),
+            $listeners,
             $this->wildcardsCache[$eventName] ?? $this->getWildcardListeners($eventName)
         );
 
@@ -350,9 +340,7 @@ class Dispatcher implements DispatcherContract
 
         foreach ($this->wildcards as $key => $listeners) {
             if (Str::is($key, $eventName)) {
-                foreach ($listeners as $listener) {
-                    $wildcards[] = $this->makeListener($listener, true);
-                }
+                $wildcards = array_merge($wildcards, $listeners);
             }
         }
 
@@ -370,7 +358,7 @@ class Dispatcher implements DispatcherContract
     {
         foreach (class_implements($eventName) as $interface) {
             if (isset($this->listeners[$interface])) {
-                foreach ($this->prepareListeners($interface) as $names) {
+                foreach ($this->listeners[$interface] as $names) {
                     $listeners = array_merge($listeners, (array) $names);
                 }
             }
@@ -380,26 +368,9 @@ class Dispatcher implements DispatcherContract
     }
 
     /**
-     * Prepare the listeners for a given event.
-     *
-     * @param  string  $eventName
-     * @return \Closure[]
-     */
-    protected function prepareListeners(string $eventName)
-    {
-        $listeners = [];
-
-        foreach ($this->listeners[$eventName] ?? [] as $listener) {
-            $listeners[] = $this->makeListener($listener);
-        }
-
-        return $listeners;
-    }
-
-    /**
      * Register an event listener with the dispatcher.
      *
-     * @param  \Closure|string|array  $listener
+     * @param  \Closure|string  $listener
      * @param  bool  $wildcard
      * @return \Closure
      */
@@ -641,7 +612,7 @@ class Dispatcher implements DispatcherContract
      */
     public function forget($event)
     {
-        if (str_contains($event, '*')) {
+        if (Str::contains($event, '*')) {
             unset($this->wildcards[$event]);
         } else {
             unset($this->listeners[$event]);
@@ -662,7 +633,7 @@ class Dispatcher implements DispatcherContract
     public function forgetPushed()
     {
         foreach ($this->listeners as $key => $value) {
-            if (str_ends_with($key, '_pushed')) {
+            if (Str::endsWith($key, '_pushed')) {
                 $this->forget($key);
             }
         }
@@ -689,15 +660,5 @@ class Dispatcher implements DispatcherContract
         $this->queueResolver = $resolver;
 
         return $this;
-    }
-
-    /**
-     * Gets the raw, unprepared listeners.
-     *
-     * @return array
-     */
-    public function getRawListeners()
-    {
-        return $this->listeners;
     }
 }

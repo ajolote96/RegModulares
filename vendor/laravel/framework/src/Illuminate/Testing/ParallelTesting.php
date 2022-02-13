@@ -77,7 +77,7 @@ class ParallelTesting
     /**
      * Set a callback that should be used when resolving options.
      *
-     * @param  \Closure|null  $resolver
+     * @param  \Closure|null  $callback
      * @return void
      */
     public function resolveOptionsUsing($resolver)
@@ -88,7 +88,7 @@ class ParallelTesting
     /**
      * Set a callback that should be used when resolving the unique process token.
      *
-     * @param  \Closure|null  $resolver
+     * @param  \Closure|null  $callback
      * @return void
      */
     public function resolveTokenUsing($resolver)
@@ -251,13 +251,13 @@ class ParallelTesting
             return $_SERVER[$option] ?? false;
         };
 
-        return $optionsResolver($option);
+        return call_user_func($optionsResolver, $option);
     }
 
     /**
      * Gets a unique test token.
      *
-     * @return string|false
+     * @return int|false
      */
     public function token()
     {
