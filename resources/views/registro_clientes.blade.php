@@ -314,4 +314,9 @@
             element3.style.display='none';
         }
     }
+    (function(){
+    $('.from-prevent-multiple-submits').on('submit', function(){
+        $('.from-prevent-multiple-submits').attr('disabled','true');
+    })
+    })();
     </script>

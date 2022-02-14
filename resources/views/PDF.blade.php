@@ -247,6 +247,20 @@
     style="margin:0in;margin-bottom:.0001pt;text-indent:0in; line-height:107%;">
     <span style='font-size:11.0pt;line-height:107%;font-family: "Calibri",sans-serif;'>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;</span> 
     <strong><span style="font-size:8.0pt;line-height:107%;color:#767171;">Guadalajara, Jalisco. &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp;</span></strong></p>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
     <h1 style="margin-right:4.3pt;">RESUMEN DEL PROYECTO</h1>
     <h2 style="margin-left:-.25pt;">RESUMEN</h2>
     <p class="MsoNormal" style="margin-left:-.25pt;">{{$info[0]->resumen}}</p>

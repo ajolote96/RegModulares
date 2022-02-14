@@ -964,7 +964,7 @@ class AdminController extends Controller
 
         //return view('PDF',['info'=>$modular]);
         $pdf = \PDF::loadView('PDF',['info'=>$modular]);
-        return $pdf->download('ejemplo.pdf');
+        return $pdf->download('Registro_Modular.pdf');
 
 
         //$pdf = \PDF::loadView('ejemplo');
