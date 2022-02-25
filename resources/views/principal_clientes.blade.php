@@ -36,6 +36,13 @@
                         </div>
                         <div class="card-body">
 
+                            @if($status == 'denegado')
+
+                            <h1> No esta habilitado el sistema de Registro de Modulares. </h1>
+
+                            @endif
+
+                            {{-- <a>{{ $status->status}}<a> --}}
 
                             <h2>{{ Auth::user()->status }}</h2>
                             @if (Auth::user()->status=="denegado")
@@ -43,7 +50,7 @@
                             @endif
 
                             @if (Auth::user()->status=="pendiente")
-                            <h4>Estate al pendiente del estatus de tu Proyecto</h4>
+                            <h4>Esté al pendiente del estatus de tu Proyecto</h4>
                             @endif
 
                             @if (Auth::user()->status!="sin_registro")

@@ -33,17 +33,19 @@ class VisitanteController extends Controller
     {
 
         $codigo = Auth::user()->id;
-        $users = DB::table('clientes')->where('id',$codigo)->get();
-        $cita = DB::table('cita_clientes')->where('id',$codigo)->get();
 
-        return view('/homeV',['opcion'=>'principal_clientes', 'users'=>$users, 'cita'=>$cita, 'datos'=>['curso1', 'curso2', 'curso3'], 'datos2'=>['proyecto', 'fecha', 'status']]);
+        $statusSistema = DB::table('status')->where('id','1')->get();
+
+
+
+
+        return view('/homeV',['opcion'=>'principal_clientes', 'status'=>'']);
     }
 
 
     public function visita()
     {
         return view('/homeV',['opcion'=>'visitas']);
-
     }
 
     public function guardarCita(Request $request)
@@ -196,18 +198,25 @@ class VisitanteController extends Controller
     public function registro()
     {
 
-        $status = Auth::user()->status;
+        $statusUsuario = Auth::user()->status;
 
-        if( $status == 'sin_registro' )
-        {
+        $statusSistema = DB::table('status')->where('id','1')->get();
 
-            return view('/homeV',['opcion'=>'registro_clientes']);
+        //  echo "<script> alert(JSON.stringify($statusSistema)); </script>";
+        if( $statusSistema[0]->status == '1' ){
+            if( $statusUsuario == 'sin_registro')
+            {
+                return view('/homeV',['opcion'=>'registro_clientes']);
+            }
+            else
+            {
+                return $this->principal();
+            }
+
         }
-        else
-        {
-            return $this->principal();
+        else{
+            return view('/homeV',['opcion'=>'principal_clientes', 'status'=>'denegado']);
         }
-
 
     }
 
@@ -233,6 +242,10 @@ class VisitanteController extends Controller
 
 
     }
+
+
+
+
 
     public function confirmar_cita(Request $request)
     {

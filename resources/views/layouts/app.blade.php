@@ -26,7 +26,7 @@
         <nav class="navbar navbar-expand-md navbar-light bg-white shadow-sm">
             <div class="container">
                 <a class="navbar-brand" href="{{ url('/') }}">
-                   Proyectos Modulares Computacion UdeG CUCEI
+                   Proyectos Modulares
                 </a>
                 <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="{{ __('Toggle navigation') }}">
                     <span class="navbar-toggler-icon"></span>
@@ -44,6 +44,8 @@
                         @if(isset(Auth::user()->tipo))
                             @if (Auth::user()->tipo=='clientes')
                                 <li><a class="nav-link" href="{{route('cliente.home') }}">Inicio</a></li>
+
+
 
                                 @if (Auth::user()->status == 'sin_registro')
                                 <li><a class="nav-link" href="{{ route('cliente.registro') }}">Registro de Modular</a></li>

@@ -92,7 +92,7 @@
                             <div class="form-group">
                                 <label for="">Nombre</label>
                                 <input type="text"
-                                class="form-control @error('Nombre_1') is-invalid @enderror" name="Nombre_1" id="Nombre_1" aria-describedby="helpId" value="{{$info[0]->Codigo_1}}">
+                                class="form-control @error('Nombre_1') is-invalid @enderror" name="Nombre_1" id="Nombre_1" aria-describedby="helpId" value="{{$info[0]->Nombre_1}}">
                                 @error('Nombre_1')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>

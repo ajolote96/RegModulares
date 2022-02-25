@@ -17,6 +17,9 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\MailController;
 use ProyectosPrestadores;
+use \App\Exports\UserExport;
+
+
 
 class AdminController extends Controller
 {
@@ -330,42 +333,7 @@ class AdminController extends Controller
             'activacion'=>true,]);
     }
 
-    public function home()
-    {
 
-        $columns = array(["data"=>"id_modular"],
-                            ["data"=>"Titulo"],
-                            ["data"=>"nombre_alumno"],
-                            ["data"=>"apellido"],
-                            ["data"=>"correo"],
-                            ["data"=>"codigo"],
-                            ["data"=>"acciones"],
-
-
-
-                        );
-        return view(
-            'home',
-            ['datos'=>[
-                'Id',
-                'Proyecto Modular',
-                'Nombre del Representante',
-                'Apellido(s)',
-                'Correo',
-                'Codigo de estudiante',
-                'Acciones'
-
-            ],
-            'opcion'=>'table',
-            'titulo'=>'Tabla de Proyectos Pendientes',
-            'ajaxroute'=>'ss.ssProyectosPendientes',
-            "columnas" => json_encode($columns),
-            'button'=>false,
-            'accion'=>false,
-            'cursos'=>false,
-            'descarga'=>false,]);
-
-    }
 
     public function firmasPendientes()
     {
@@ -705,6 +673,8 @@ class AdminController extends Controller
         ]);
     }
 
+
+
     public function prestadoresProyectos()
     {
         $columns = array(
@@ -826,7 +796,12 @@ class AdminController extends Controller
 
     }
 
-    public function ProyectosPendientes(){
+    public function home()
+    {
+
+        $statusSistema = DB::table('status')->where('id','1')->get();
+
+
         $columns = array(["data"=>"id_modular"],
                             ["data"=>"Titulo"],
                             ["data"=>"nombre_alumno"],
@@ -854,6 +829,48 @@ class AdminController extends Controller
             'titulo'=>'Tabla de Proyectos Pendientes',
             'ajaxroute'=>'ss.ssProyectosPendientes',
             "columnas" => json_encode($columns),
+            'statusSistema' => $statusSistema,
+            'button'=>false,
+            'accion'=>false,
+            'cursos'=>false,
+            'descarga'=>false,]);
+
+    }
+
+
+    public function ProyectosPendientes(){
+
+        $statusSistema = DB::table('status')->where('id','1')->get();
+
+
+        $columns = array(["data"=>"id_modular"],
+                            ["data"=>"Titulo"],
+                            ["data"=>"nombre_alumno"],
+                            ["data"=>"apellido"],
+                            ["data"=>"correo"],
+                            ["data"=>"codigo"],
+                            ["data"=>"acciones"],
+
+
+
+                        );
+        return view(
+            'home',
+            ['datos'=>[
+                'Id',
+                'Proyecto Modular',
+                'Nombre del Representante',
+                'Apellido(s)',
+                'Correo',
+                'Codigo de estudiante',
+                'Acciones'
+
+            ],
+            'opcion'=>'table',
+            'titulo'=>'Tabla de Proyectos Pendientes',
+            'ajaxroute'=>'ss.ssProyectosPendientes',
+            "columnas" => json_encode($columns),
+            'statusSistema' => $statusSistema,
             'button'=>false,
             'accion'=>false,
             'cursos'=>false,
@@ -862,34 +879,39 @@ class AdminController extends Controller
 
 
     public function ProyectosAprovados(){
-                $columns = array(["data"=>"id_modular"],
-                ["data"=>"Titulo"],
-                ["data"=>"nombre_alumno"],
-                ["data"=>"apellido"],
-                ["data"=>"correo"],
-                ["data"=>"codigo"],
+
+        $statusSistema = DB::table('status')->where('id','1')->get();
+
+        $columns = array(["data"=>"id_modular"],
+        ["data"=>"Titulo"],
+        ["data"=>"nombre_alumno"],
+        ["data"=>"apellido"],
+        ["data"=>"correo"],
+        ["data"=>"codigo"],
 
 
-            );
-            return view(
-                'home',
-                ['datos'=>[
-                'Id',
-                'Proyecto Modular',
-                'Nombre del Representante',
-                'Apellido(s)',
-                'Correo',
-                'Codigo de estudiante',
-                'Acciones'
-            ],
-            'opcion'=>'table',
-            'titulo'=>'Tabla de Proyectos Aprobados',
-            'ajaxroute'=>'ss.ssProyectosAprovados',
-            "columnas" => json_encode($columns),
-            'button'=>false,
-            'accion'=>false,
-            'cursos'=>false,
-            'descarga'=>false,]);
+        );
+
+        return view(
+            'home',
+            ['datos'=>[
+            'Id',
+            'Proyecto Modular',
+            'Nombre del Representante',
+            'Apellido(s)',
+            'Correo',
+            'Codigo de estudiante',
+            'Acciones'
+        ],
+        'opcion'=>'table',
+        'titulo'=>'Tabla de Proyectos Aprobados',
+        'ajaxroute'=>'ss.ssProyectosAprovados',
+        "columnas" => json_encode($columns),
+        'statusSistema' => $statusSistema,
+        'button'=>false,
+        'accion'=>false,
+        'cursos'=>false,
+        'descarga'=>false,]);
     }
 
     public function AprobarProyecto(Request $request){
@@ -970,8 +992,38 @@ class AdminController extends Controller
         //$pdf = \PDF::loadView('ejemplo');
     }
 
+    public function Excel(){
+
+        $query =DB::table('modulares_pendientes')->get();
+        return \Excel::download(new UserExport,'TablaProyectosModulares.xlsx');
+    }
 
 
+    public function activarregistros()
+    {
+
+        $statusSistema = DB::table('status')->where('id','1')->get();
+
+        //  echo "<script> alert(JSON.stringify($statusSistema)); </script>";
+        if( $statusSistema[0]->status == '1' ){
+
+            $modificar = DB::table('status')->where('id','1')->update([
+
+                'status'=>"0"
+            ]);
+        }
+        else{
+            $modificar = DB::table('status')->where('id','1')->update([
+
+                'status'=>"1"
+            ]);
+        }
+
+
+
+        return redirect()->route("admin.ProyectosPendientes");
+
+    }
 
 
 }

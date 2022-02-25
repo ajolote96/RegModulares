@@ -97,6 +97,9 @@ Route::name('admin.')->group(function () {
     Route::get('/admin/general', [App\Http\Controllers\AdminController::class, 'general'])->name('general')->middleware('role:admin,Superadmin');
     Route::get('/admin/prestadoresProyectos', [App\Http\Controllers\AdminController::class, 'prestadoresProyectos'])->name('prestadoresProyectos')->middleware('role:admin,Superadmin');
     Route::get('/admin/ProyectosCitados', [App\Http\Controllers\AdminController::class, 'ProyectosCitados'])->name('ProyectosCitados')->middleware('role:admin,Superadmin');
+    Route::get('/admin/excel', [App\Http\Controllers\AdminController::class, 'Excel'])->name('excel')->middleware('role:admin,Superadmin');
+    Route::get('/admin/activarregistros', [App\Http\Controllers\AdminController::class, 'activarregistros'])->name('activarregistros')->middleware('role:admin,Superadmin');
+
 
 
     Route::get('/admin/ProyectosPendientes', [App\Http\Controllers\AdminController::class, 'ProyectosPendientes'])->name('ProyectosPendientes')->middleware('role:admin,Superadmin');

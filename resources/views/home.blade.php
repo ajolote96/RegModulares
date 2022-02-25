@@ -62,7 +62,7 @@ scratch. This page gets rid of all links and provides the needed markup only.
           <!--<img src="dist/img/user2-160x160.jpg" class="img-circle elevation-2" alt="User Image">-->
         </div>
         <div class="info">
-          <a class="d-block">{{ Auth::user()->name }} {{  Auth::user()->apellido}}</a>
+          <a href={{ route('modificaradmin') }} class="d-block">{{ Auth::user()->name }} {{  Auth::user()->apellido}}</a>
         </div>
       </div>
 
